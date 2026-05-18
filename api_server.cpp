@@ -1,5 +1,7 @@
 #include "api_server.h"
 #include "container_list.h"
+#include "snapshot_lists.h"
+#include "event_log.h"
 #include "../droidspace.h"
 
 #include <arpa/inet.h>
@@ -449,6 +451,51 @@ ContainerListRequest parse_container_list_request(
   return request;
 }
 
+EventsRequest parse_events_request(const std::string& target) {
+  EventsRequest request {};
+
+  const std::size_t query_pos = target.find('?');
+  if (query_pos == std::string::npos ||
+      query_pos + 1 >= target.size()) {
+    return request;
+  }
+
+  /*
+   * Small, deliberate parser for only the fields observed from Portainer's
+   * event-log request. Unknown parameters are ignored for now.
+   */
+  std::size_t pos = query_pos + 1;
+
+  while (pos <= target.size()) {
+    const std::size_t amp = target.find('&', pos);
+    const std::size_t end =
+        amp == std::string::npos ? target.size() : amp;
+
+    const std::string item = target.substr(pos, end - pos);
+    const std::size_t eq = item.find('=');
+
+    const std::string key =
+        eq == std::string::npos ? item : item.substr(0, eq);
+
+    const std::string value =
+        eq == std::string::npos ? "" : item.substr(eq + 1);
+
+    if (key == "since") {
+      request.since = value;
+    } else if (key == "until") {
+      request.until = value;
+    }
+
+    if (amp == std::string::npos) {
+      break;
+    }
+
+    pos = amp + 1;
+  }
+
+  return request;
+}
+
 bool parse_port(const std::string& value,
                 std::uint16_t& port_out,
                 std::string& error) {
@@ -690,6 +737,82 @@ bool send_container_list_ok(int fd,
                             error);
 }
 
+bool send_image_list_ok(int fd,
+                        bool suppress_body,
+                        std::string& error) {
+  std::string body;
+  if (!request_image_list_json_from_core(body, error)) {
+    return false;
+  }
+
+  return send_http_response(fd,
+                            200,
+                            "OK",
+                            "application/json",
+                            body,
+                            suppress_body,
+                            error);
+}
+
+bool send_volume_list_ok(int fd,
+                         bool suppress_body,
+                         std::string& error) {
+  std::string body;
+  if (!request_volume_list_json_from_core(body, error)) {
+    return false;
+  }
+
+  return send_http_response(fd,
+                            200,
+                            "OK",
+                            "application/json",
+                            body,
+                            suppress_body,
+                            error);
+}
+
+bool send_network_list_ok(int fd,
+                          bool suppress_body,
+                          std::string& error) {
+  std::string body;
+  if (!request_network_list_json_from_core(body, error)) {
+    return false;
+  }
+
+  return send_http_response(fd,
+                            200,
+                            "OK",
+                            "application/json",
+                            body,
+                            suppress_body,
+                            error);
+}
+
+bool send_events_ok(int fd,
+                    const std::string& target,
+                    bool suppress_body,
+                    std::string& error) {
+  const EventsRequest request = parse_events_request(target);
+
+  std::string body;
+  if (!request_event_log_stream_from_core(request, body, error)) {
+    return false;
+  }
+
+  /*
+   * API v1.40-compatible behavior:
+   * Moby used application/json for event streams at this API level.
+   * An empty body is intentional and accepted by Portainer's event-log parser.
+   */
+  return send_http_response(fd,
+                            200,
+                            "OK",
+                            "application/json",
+                            body,
+                            suppress_body,
+                            error);
+}
+
 }  // namespace
 
 bool parse_tcp_listen_endpoint(const std::string& value,
@@ -854,6 +977,22 @@ bool ApiServer::handle_client(int client_fd, std::string& error) const {
   if (is_get && is_api_target(target, "/containers/json")) {
     return send_container_list_ok(client_fd, target, false, error);
   }
+  
+  if (is_get && is_api_target(target, "/images/json")) {
+    return send_image_list_ok(client_fd, false, error);
+  }
+
+  if (is_get && is_api_target(target, "/volumes")) {
+    return send_volume_list_ok(client_fd, false, error);
+  }
+
+  if (is_get && is_api_target(target, "/networks")) {
+    return send_network_list_ok(client_fd, false, error);
+  }
+  
+  if (is_get && is_api_target(target, "/events")) {
+    return send_events_ok(client_fd, target, false, error);
+  }
 
   return send_not_found(client_fd, is_head, error);
 }
@@ -863,12 +1002,27 @@ bool ApiServer::run(std::string& error) {
   if (!create_listener(listener_fd, error)) {
     return false;
   }
-
+// To tty
   std::cerr << "socketd: listening on http://"
             << config_.bind_address
             << ':'
             << config_.port
             << '\n';
+// To API
+  const std::string listen_target =
+      "tcp://" + config_.bind_address + ":" + std::to_string(config_.port);
+
+  const SocketdEventAttributes attrs[] = {
+      {"name", "droidspaces-socketd"},
+      {"component", "socketd"},
+      {"listen", listen_target},
+  };
+
+  record_socketd_event("daemon",
+                       "start",
+                       "droidspaces-socketd",
+                       attrs,
+                       sizeof(attrs) / sizeof(attrs[0]));
 
   for (;;) {
     const int client_fd = ::accept(listener_fd, nullptr, nullptr);
