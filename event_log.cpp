@@ -1,5 +1,7 @@
 #include "event_log.h"
 
+#include "backend_client.h"
+
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
@@ -184,6 +186,24 @@ std::string encode_event_json_line(const SocketdEvent& event) {
   return out;
 }
 
+SocketdEvent socketd_event_from_core_event(const CoreEventResult& core) {
+  SocketdEvent event;
+  event.type = core.type;
+  event.action = core.action;
+  event.actor_id = core.actor_id;
+  event.time = core.time;
+  event.time_nano = core.time_nano;
+
+  if (!core.actor_name.empty()) {
+    event.attributes.push_back(EventAttribute{
+        "name",
+        core.actor_name,
+    });
+  }
+
+  return event;
+}
+
 }  // namespace
 
 void record_socketd_event(const std::string& type,
@@ -220,13 +240,6 @@ bool request_event_log_stream_from_core(
   error.clear();
   stream_out.clear();
 
-  /*
-   * TODO(socketd-core-events):
-   * This endpoint currently exposes extension-owned daemon events from the
-   * socketd-local event journal. When the socket extension has a validated
-   * need for core-runtime lifecycle events, merge in a backend-provided event
-   * stream behind this same socketd-owned seam.
-   */
   std::int64_t since = 0;
   std::int64_t until = 0;
 
@@ -243,11 +256,56 @@ bool request_event_log_stream_from_core(
     return false;
   }
 
+  std::vector<SocketdEvent> merged_events;
+  merged_events.reserve(g_socketd_events.size());
+
   for (const SocketdEvent& event : g_socketd_events) {
     if (!event_in_window(event, since, until)) {
       continue;
     }
 
+    merged_events.push_back(event);
+  }
+
+  BackendClient backend;
+  std::vector<CoreEventResult> core_events;
+  std::string backend_error;
+
+  if (backend.poll_events(since, core_events, backend_error)) {
+    merged_events.reserve(merged_events.size() + core_events.size());
+
+    for (const CoreEventResult& core_event : core_events) {
+      SocketdEvent event = socketd_event_from_core_event(core_event);
+
+      if (!event_in_window(event, since, until)) {
+        continue;
+      }
+
+      merged_events.push_back(std::move(event));
+    }
+  } else {
+    /*
+     * CONCERN(socketd-events):
+     * The event endpoint follows the current compatibility plan and degrades
+     * gracefully when the privileged backend is unavailable: socketd-local
+     * daemon events remain visible instead of failing the entire /events
+     * response. If a later contract requires hard backend failure, tighten
+     * that policy here.
+     */
+  }
+
+  std::stable_sort(
+      merged_events.begin(),
+      merged_events.end(),
+      [](const SocketdEvent& lhs, const SocketdEvent& rhs) {
+        if (lhs.time_nano != rhs.time_nano) {
+          return lhs.time_nano < rhs.time_nano;
+        }
+
+        return lhs.time < rhs.time;
+      });
+
+  for (const SocketdEvent& event : merged_events) {
     stream_out += encode_event_json_line(event);
   }
 

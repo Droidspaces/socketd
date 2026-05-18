@@ -17,10 +17,8 @@ struct SocketdEventAttributes {
 
 /*
  * Record a socketd-owned engine-style event in the extension-local journal.
- *
- * The public /events endpoint exposes this journal in Docker-compatible
- * event-stream form. This deliberately covers only events owned by the socket
- * extension itself; core-engine events remain a later, separate backend seam.
+ * These local daemon events are merged with backend core lifecycle events by
+ * request_event_log_stream_from_core().
  */
 void record_socketd_event(const std::string& type,
                           const std::string& action,
@@ -29,8 +27,11 @@ void record_socketd_event(const std::string& type,
                           std::size_t attribute_count);
 
 /*
- * Return historical socketd-owned events matching the requested time window
- * as a Docker-compatible stream of JSON objects.
+ * Return events matching the requested time window as a Docker-compatible
+ * stream of JSON objects. The response merges:
+ *
+ *   - socketd-owned local events recorded in this process, and
+ *   - core lifecycle events fetched from the privileged backend bridge.
  */
 bool request_event_log_stream_from_core(
     const EventsRequest& request,

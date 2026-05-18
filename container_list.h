@@ -17,12 +17,10 @@ struct ContainerListRequest {
 };
 
 /*
- * Socketd-owned seam for obtaining the container-list payload.
- *
- * For the current extension-only bring-up step this is deliberately a dummy:
- * it returns an empty Docker-shaped JSON list so Portainer can advance to its
- * next probe. Once that behavior is confirmed, this function becomes the
- * place where socketd requests real container data from the core bridge.
+ * Socketd-owned seam for obtaining the Docker-compatible container list
+ * payload. The HTTP server remains independent of backend protocol details;
+ * this layer requests typed core records through BackendClient and renders the
+ * public JSON shape expected by Docker-compatible consumers.
  */
 bool request_container_list_json_from_core(
     const ContainerListRequest& request,

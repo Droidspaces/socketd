@@ -7,13 +7,10 @@ namespace droidspaces::socketd {
 /*
  * Extension-owned seams for Portainer snapshot inventory probes.
  *
- * These functions intentionally return dummy payloads for now. Portainer has
- * been observed requesting images, volumes, and networks during its Docker
- * snapshot pass after /containers/json succeeds.
- *
- * No core-engine change is warranted at this stage: first we confirm that
- * Portainer's UI settles when these discovery probes receive structurally
- * valid empty responses.
+ * Images are rendered from typed backend pseudo-image records. Volumes and
+ * networks remain socketd-owned compatibility projections: Droidspaces has no
+ * Docker-managed named-volume model, while the network list is a fixed public
+ * facade over Droidspaces networking modes.
  */
 
 bool request_image_list_json_from_core(std::string& json_out,
