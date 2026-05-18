@@ -1,4 +1,5 @@
 #include "api_server.h"
+#include "container_list.h"
 #include "../droidspace.h"
 
 #include <arpa/inet.h>
@@ -397,6 +398,57 @@ bool is_api_target(const std::string& target,
          is_versioned_api_path(path, endpoint_path);
 }
 
+bool is_truthy_query_value(const std::string& value) {
+  return value.empty() ||
+         value == "1" ||
+         value == "true";
+}
+
+ContainerListRequest parse_container_list_request(
+    const std::string& target) {
+  ContainerListRequest request {};
+
+  const std::size_t query_pos = target.find('?');
+  if (query_pos == std::string::npos ||
+      query_pos + 1 >= target.size()) {
+    return request;
+  }
+
+  /*
+   * This is intentionally a very small query parser for the bring-up phase.
+   * It extracts only the public API semantic that socketd currently cares
+   * about: ?all=1. Unknown query parameters are ignored.
+   */
+  std::size_t pos = query_pos + 1;
+
+  while (pos <= target.size()) {
+    const std::size_t amp = target.find('&', pos);
+    const std::size_t end =
+        amp == std::string::npos ? target.size() : amp;
+
+    const std::string item = target.substr(pos, end - pos);
+    const std::size_t eq = item.find('=');
+
+    const std::string key =
+        eq == std::string::npos ? item : item.substr(0, eq);
+
+    const std::string value =
+        eq == std::string::npos ? "" : item.substr(eq + 1);
+
+    if (key == "all") {
+      request.include_all = is_truthy_query_value(value);
+    }
+
+    if (amp == std::string::npos) {
+      break;
+    }
+
+    pos = amp + 1;
+  }
+
+  return request;
+}
+
 bool parse_port(const std::string& value,
                 std::uint16_t& port_out,
                 std::string& error) {
@@ -617,6 +669,27 @@ bool send_info_ok(int fd, bool suppress_body, std::string& error) {
                             error);
 }
 
+bool send_container_list_ok(int fd,
+                            const std::string& target,
+                            bool suppress_body,
+                            std::string& error) {
+  const ContainerListRequest request =
+      parse_container_list_request(target);
+
+  std::string body;
+  if (!request_container_list_json_from_core(request, body, error)) {
+    return false;
+  }
+
+  return send_http_response(fd,
+                            200,
+                            "OK",
+                            "application/json",
+                            body,
+                            suppress_body,
+                            error);
+}
+
 }  // namespace
 
 bool parse_tcp_listen_endpoint(const std::string& value,
@@ -776,6 +849,10 @@ bool ApiServer::handle_client(int client_fd, std::string& error) const {
   
   if (is_get && is_api_target(target, "/info")) {
     return send_info_ok(client_fd, false, error);
+  }
+  
+  if (is_get && is_api_target(target, "/containers/json")) {
+    return send_container_list_ok(client_fd, target, false, error);
   }
 
   return send_not_found(client_fd, is_head, error);
