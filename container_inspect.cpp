@@ -10,9 +10,9 @@
 namespace droidspaces::socketd {
 namespace {
 
-constexpr const char* kDockerZeroTime = "0001-01-01T00:00:00Z";
+constexpr const char *kDockerZeroTime = "0001-01-01T00:00:00Z";
 
-std::string json_escape(const std::string& input) {
+std::string json_escape(const std::string &input) {
   std::string out;
   out.reserve(input.size());
 
@@ -20,36 +20,36 @@ std::string json_escape(const std::string& input) {
 
   for (unsigned char ch : input) {
     switch (ch) {
-      case '"':
-        out += "\\\"";
-        break;
-      case '\\':
-        out += "\\\\";
-        break;
-      case '\b':
-        out += "\\b";
-        break;
-      case '\f':
-        out += "\\f";
-        break;
-      case '\n':
-        out += "\\n";
-        break;
-      case '\r':
-        out += "\\r";
-        break;
-      case '\t':
-        out += "\\t";
-        break;
-      default:
-        if (ch < 0x20) {
-          out += "\\u00";
-          out += kHex[(ch >> 4) & 0x0f];
-          out += kHex[ch & 0x0f];
-        } else {
-          out += static_cast<char>(ch);
-        }
-        break;
+    case '"':
+      out += "\\\"";
+      break;
+    case '\\':
+      out += "\\\\";
+      break;
+    case '\b':
+      out += "\\b";
+      break;
+    case '\f':
+      out += "\\f";
+      break;
+    case '\n':
+      out += "\\n";
+      break;
+    case '\r':
+      out += "\\r";
+      break;
+    case '\t':
+      out += "\\t";
+      break;
+    default:
+      if (ch < 0x20) {
+        out += "\\u00";
+        out += kHex[(ch >> 4) & 0x0f];
+        out += kHex[ch & 0x0f];
+      } else {
+        out += static_cast<char>(ch);
+      }
+      break;
     }
   }
 
@@ -66,20 +66,21 @@ std::string rfc3339_utc(std::int64_t unix_seconds) {
     return kDockerZeroTime;
   }
 
-  std::tm tm {};
-#if defined(_POSIX_THREAD_SAFE_FUNCTIONS) || defined(__ANDROID__) || defined(__linux__)
+  std::tm tm{};
+#if defined(_POSIX_THREAD_SAFE_FUNCTIONS) || defined(__ANDROID__) ||           \
+    defined(__linux__)
   if (::gmtime_r(&value, &tm) == nullptr) {
     return kDockerZeroTime;
   }
 #else
-  const std::tm* tmp = std::gmtime(&value);
+  const std::tm *tmp = std::gmtime(&value);
   if (tmp == nullptr) {
     return kDockerZeroTime;
   }
   tm = *tmp;
 #endif
 
-  char buffer[64] {};
+  char buffer[64]{};
   if (std::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &tm) == 0) {
     return kDockerZeroTime;
   }
@@ -87,33 +88,32 @@ std::string rfc3339_utc(std::int64_t unix_seconds) {
   return buffer;
 }
 
-const char* port_type(std::uint8_t proto) {
+const char *port_type(std::uint8_t proto) {
   return proto == 1u ? "udp" : "tcp";
 }
 
-const char* docker_network_mode(std::uint8_t mode) {
+const char *docker_network_mode(std::uint8_t mode) {
   switch (mode) {
-    case 1u:
-      return "bridge";
-    case 2u:
-      return "none";
-    case 0u:
-    default:
-      return "host";
+  case 1u:
+    return "bridge";
+  case 2u:
+    return "none";
+  case 0u:
+  default:
+    return "host";
   }
 }
 
-std::string container_command(const ContainerInspectResult& record) {
+std::string container_command(const ContainerInspectResult &record) {
   return record.custom_init.empty() ? "/sbin/init" : record.custom_init;
 }
 
-const char* container_state_status(const ContainerInspectResult& record) {
+const char *container_state_status(const ContainerInspectResult &record) {
   return record.pid > 0 ? "running" : "exited";
 }
 
-void append_string_field(std::string& out,
-                         const char* name,
-                         const std::string& value) {
+void append_string_field(std::string &out, const char *name,
+                         const std::string &value) {
   out += '"';
   out += name;
   out += "\":\"";
@@ -121,8 +121,8 @@ void append_string_field(std::string& out,
   out += '"';
 }
 
-void append_port_map_json(std::string& out,
-                          const ContainerInspectResult& record,
+void append_port_map_json(std::string &out,
+                          const ContainerInspectResult &record,
                           bool include_host_bindings) {
   out += '{';
 
@@ -131,7 +131,7 @@ void append_port_map_json(std::string& out,
       out += ',';
     }
 
-    const ContainerPortResult& port = record.ports[i];
+    const ContainerPortResult &port = record.ports[i];
     out += '"';
     out += std::to_string(port.container_port);
     out += '/';
@@ -150,9 +150,8 @@ void append_port_map_json(std::string& out,
   out += '}';
 }
 
-void append_config_json(std::string& out,
-                        const ContainerInspectResult& record,
-                        const std::string& command) {
+void append_config_json(std::string &out, const ContainerInspectResult &record,
+                        const std::string &command) {
   out += "\"Config\":{";
   append_string_field(out, "Hostname", record.hostname);
   out += ",\"Domainname\":\"\",";
@@ -170,7 +169,9 @@ void append_config_json(std::string& out,
   out += "\"Cmd\":[\"";
   out += json_escape(command);
   out += "\"],";
-  append_string_field(out, "Image", record.image_ref.empty() ? record.rootfs_path : record.image_ref);
+  append_string_field(out, "Image",
+                      record.image_ref.empty() ? record.rootfs_path
+                                               : record.image_ref);
   out += ",\"Volumes\":{},";
   out += "\"WorkingDir\":\"\",";
   out += "\"Entrypoint\":[],";
@@ -179,8 +180,8 @@ void append_config_json(std::string& out,
   out += '}';
 }
 
-void append_host_config_json(std::string& out,
-                             const ContainerInspectResult& record) {
+void append_host_config_json(std::string &out,
+                             const ContainerInspectResult &record) {
   out += "\"HostConfig\":{";
   out += "\"Binds\":[],";
   out += "\"ContainerIDFile\":\"\",";
@@ -254,9 +255,8 @@ void append_host_config_json(std::string& out,
   out += '}';
 }
 
-void append_state_json(std::string& out,
-                       const ContainerInspectResult& record,
-                       const std::string& started_at) {
+void append_state_json(std::string &out, const ContainerInspectResult &record,
+                       const std::string &started_at) {
   out += "\"State\":{";
   out += "\"Status\":\"";
   out += container_state_status(record);
@@ -282,8 +282,8 @@ void append_state_json(std::string& out,
   out += '}';
 }
 
-void append_networks_json(std::string& out,
-                          const ContainerInspectResult& record) {
+void append_networks_json(std::string &out,
+                          const ContainerInspectResult &record) {
   out += "\"Networks\":{";
 
   if (record.net_mode == 1u) {
@@ -309,8 +309,8 @@ void append_networks_json(std::string& out,
   out += '}';
 }
 
-void append_network_settings_json(std::string& out,
-                                  const ContainerInspectResult& record) {
+void append_network_settings_json(std::string &out,
+                                  const ContainerInspectResult &record) {
   out += "\"NetworkSettings\":{";
   out += "\"Bridge\":\"\",";
   out += "\"SandboxID\":\"\",";
@@ -339,8 +339,8 @@ void append_network_settings_json(std::string& out,
   out += '}';
 }
 
-void append_inspect_json(std::string& out,
-                         const ContainerInspectResult& record) {
+void append_inspect_json(std::string &out,
+                         const ContainerInspectResult &record) {
   const std::string command = container_command(record);
   const std::string started_at = rfc3339_utc(record.started_at);
   const std::string created = started_at;
@@ -363,7 +363,9 @@ void append_inspect_json(std::string& out,
   out += "\"LogPath\":\"\",";
   append_string_field(out, "Id", record.uuid);
   out += ',';
-  append_string_field(out, "Image", record.image_ref.empty() ? record.rootfs_path : record.image_ref);
+  append_string_field(out, "Image",
+                      record.image_ref.empty() ? record.rootfs_path
+                                               : record.image_ref);
   out += ',';
   out += "\"MountLabel\":\"\",";
   out += "\"Name\":\"/";
@@ -383,12 +385,12 @@ void append_inspect_json(std::string& out,
   out += "}\n";
 }
 
-}  // namespace
+} // namespace
 
-bool request_container_inspect_json_from_core(const std::string& ref,
-                                              std::string& json_out,
-                                              bool& not_found,
-                                              std::string& error) {
+bool request_container_inspect_json_from_core(const std::string &ref,
+                                              std::string &json_out,
+                                              bool &not_found,
+                                              std::string &error) {
   error.clear();
   not_found = false;
 
@@ -407,4 +409,4 @@ bool request_container_inspect_json_from_core(const std::string& ref,
   return true;
 }
 
-}  // namespace droidspaces::socketd
+} // namespace droidspaces::socketd

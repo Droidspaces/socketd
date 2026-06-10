@@ -5,8 +5,8 @@
 #include "socketd_protocol.h"
 
 #include <csignal>
-#include <cstdio>
 #include <cstdint>
+#include <cstdio>
 #include <iostream>
 #include <string>
 
@@ -15,30 +15,28 @@ namespace {
 using droidspaces::socketd::ApiServer;
 using droidspaces::socketd::BackendClient;
 using droidspaces::socketd::CapabilitiesResult;
-using droidspaces::socketd::TcpListenConfig;
 using droidspaces::socketd::parse_tcp_listen_endpoint;
-using droidspaces::socketd::SocketdEventAttributes;
 using droidspaces::socketd::record_socketd_event;
+using droidspaces::socketd::SocketdEventAttributes;
+using droidspaces::socketd::TcpListenConfig;
 
 constexpr std::uint32_t kRequiredBackendCapabilities =
-    DS_SOCKETD_CAP_PROTOCOL_V1 |
-    DS_SOCKETD_CAP_PING |
+    DS_SOCKETD_CAP_PROTOCOL_V1 | DS_SOCKETD_CAP_PING |
     DS_SOCKETD_CAP_CAPABILITIES;
 
-void print_usage(const char* argv0) {
-  std::cerr
-      << "Usage:\n"
-      << "  " << argv0 << " --listen-tcp [PORT]\n"
-      << "  " << argv0 << " --listen-tcp [ADDR:PORT]\n"
-      << "\n"
-      << "Examples:\n"
-      << "  " << argv0 << " --listen-tcp\n"
-      << "  " << argv0 << " --listen-tcp 2375\n"
-      << "  " << argv0 << " --listen-tcp 127.0.0.1:2375\n"
-      << "  " << argv0 << " --listen-tcp 0.0.0.0:2375\n";
+void print_usage(const char *argv0) {
+  std::cerr << "Usage:\n"
+            << "  " << argv0 << " --listen-tcp [PORT]\n"
+            << "  " << argv0 << " --listen-tcp [ADDR:PORT]\n"
+            << "\n"
+            << "Examples:\n"
+            << "  " << argv0 << " --listen-tcp\n"
+            << "  " << argv0 << " --listen-tcp 2375\n"
+            << "  " << argv0 << " --listen-tcp 127.0.0.1:2375\n"
+            << "  " << argv0 << " --listen-tcp 0.0.0.0:2375\n";
 }
 
-bool check_backend(std::string& error) {
+bool check_backend(std::string &error) {
   BackendClient backend;
 
   if (!backend.ping(error)) {
@@ -46,7 +44,7 @@ bool check_backend(std::string& error) {
     return false;
   }
 
-  CapabilitiesResult caps {};
+  CapabilitiesResult caps{};
   if (!backend.capabilities(caps, error)) {
     error = "backend CAPABILITIES failed: " + error;
     return false;
@@ -57,38 +55,32 @@ bool check_backend(std::string& error) {
     error = "backend is missing required base capabilities";
     return false;
   }
-// To tty
+  // To tty
   std::cerr << "socketd: backend handshake OK, capabilities mask: 0x"
-            << std::hex
-            << caps.mask
-            << std::dec
-            << '\n';
-            
-// To API
-const std::string caps_text = "0x" + [&caps]() {
-  char buffer[32] {};
-  std::snprintf(buffer, sizeof(buffer), "%x", caps.mask);
-  return std::string(buffer);
-}();
+            << std::hex << caps.mask << std::dec << '\n';
 
-const SocketdEventAttributes attrs[] = {
-    {"name", "droidspaces-backend"},
-    {"component", "socketd"},
-    {"capabilities", caps_text},
-};
+  // To API
+  const std::string caps_text = "0x" + [&caps]() {
+    char buffer[32]{};
+    std::snprintf(buffer, sizeof(buffer), "%x", caps.mask);
+    return std::string(buffer);
+  }();
 
-record_socketd_event("daemon",
-                     "connect",
-                     "droidspaces-backend",
-                     attrs,
-                     sizeof(attrs) / sizeof(attrs[0]));
+  const SocketdEventAttributes attrs[] = {
+      {"name", "droidspaces-backend"},
+      {"component", "socketd"},
+      {"capabilities", caps_text},
+  };
+
+  record_socketd_event("daemon", "connect", "droidspaces-backend", attrs,
+                       sizeof(attrs) / sizeof(attrs[0]));
 
   return true;
 }
 
-}  // namespace
+} // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   /*
    * Avoid process termination if a TCP peer disappears while a response
    * is being written.
@@ -96,7 +88,7 @@ int main(int argc, char** argv) {
   (void)std::signal(SIGPIPE, SIG_IGN);
 
   bool listen_tcp = false;
-  TcpListenConfig tcp_config {};
+  TcpListenConfig tcp_config{};
 
   for (int i = 1; i < argc; ++i) {
     const std::string arg = argv[i];

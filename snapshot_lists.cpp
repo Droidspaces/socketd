@@ -10,7 +10,7 @@
 namespace droidspaces::socketd {
 namespace {
 
-std::string json_escape(const std::string& input) {
+std::string json_escape(const std::string &input) {
   std::string out;
   out.reserve(input.size());
 
@@ -18,44 +18,43 @@ std::string json_escape(const std::string& input) {
 
   for (unsigned char ch : input) {
     switch (ch) {
-      case '"':
-        out += "\\\"";
-        break;
-      case '\\':
-        out += "\\\\";
-        break;
-      case '\b':
-        out += "\\b";
-        break;
-      case '\f':
-        out += "\\f";
-        break;
-      case '\n':
-        out += "\\n";
-        break;
-      case '\r':
-        out += "\\r";
-        break;
-      case '\t':
-        out += "\\t";
-        break;
-      default:
-        if (ch < 0x20) {
-          out += "\\u00";
-          out += kHex[(ch >> 4) & 0x0f];
-          out += kHex[ch & 0x0f];
-        } else {
-          out += static_cast<char>(ch);
-        }
-        break;
+    case '"':
+      out += "\\\"";
+      break;
+    case '\\':
+      out += "\\\\";
+      break;
+    case '\b':
+      out += "\\b";
+      break;
+    case '\f':
+      out += "\\f";
+      break;
+    case '\n':
+      out += "\\n";
+      break;
+    case '\r':
+      out += "\\r";
+      break;
+    case '\t':
+      out += "\\t";
+      break;
+    default:
+      if (ch < 0x20) {
+        out += "\\u00";
+        out += kHex[(ch >> 4) & 0x0f];
+        out += kHex[ch & 0x0f];
+      } else {
+        out += static_cast<char>(ch);
+      }
+      break;
     }
   }
 
   return out;
 }
 
-void append_image_json(std::string& out,
-                       const ImageRecordResult& image) {
+void append_image_json(std::string &out, const ImageRecordResult &image) {
   out += "{";
 
   out += "\"Containers\":";
@@ -93,10 +92,10 @@ void append_image_json(std::string& out,
   out += "}";
 }
 
-}  // namespace
+} // namespace
 
-bool request_image_list_json_from_core(std::string& json_out,
-                                       std::string& error) {
+bool request_image_list_json_from_core(std::string &json_out,
+                                       std::string &error) {
   error.clear();
 
   BackendClient backend;
@@ -125,8 +124,8 @@ bool request_image_list_json_from_core(std::string& json_out,
   return true;
 }
 
-bool request_volume_list_json_from_core(std::string& json_out,
-                                        std::string& error) {
+bool request_volume_list_json_from_core(std::string &json_out,
+                                        std::string &error) {
   error.clear();
 
   /*
@@ -137,8 +136,8 @@ bool request_volume_list_json_from_core(std::string& json_out,
   return true;
 }
 
-bool request_network_list_json_from_core(std::string& json_out,
-                                         std::string& error) {
+bool request_network_list_json_from_core(std::string &json_out,
+                                         std::string &error) {
   error.clear();
 
   /*
@@ -146,62 +145,61 @@ bool request_network_list_json_from_core(std::string& json_out,
    * These are socketd-owned Docker-shaped descriptors; no mutable Docker
    * network object is being introduced into the core runtime.
    */
-  json_out =
-      "["
-      "{"
-      "\"Name\":\"droidspaces-bridge\","
-      "\"Id\":\"droidspaces-bridge\","
-      "\"Created\":\"1970-01-01T00:00:00Z\","
-      "\"Scope\":\"local\","
-      "\"Driver\":\"bridge\","
-      "\"EnableIPv6\":false,"
-      "\"IPAM\":{\"Driver\":\"default\",\"Options\":{},\"Config\":[]},"
-      "\"Internal\":false,"
-      "\"Attachable\":false,"
-      "\"Ingress\":false,"
-      "\"ConfigFrom\":{\"Network\":\"\"},"
-      "\"ConfigOnly\":false,"
-      "\"Containers\":{},"
-      "\"Options\":{},"
-      "\"Labels\":{}"
-      "},"
-      "{"
-      "\"Name\":\"host\","
-      "\"Id\":\"host\","
-      "\"Created\":\"1970-01-01T00:00:00Z\","
-      "\"Scope\":\"local\","
-      "\"Driver\":\"host\","
-      "\"EnableIPv6\":false,"
-      "\"IPAM\":{\"Driver\":\"default\",\"Options\":{},\"Config\":[]},"
-      "\"Internal\":false,"
-      "\"Attachable\":false,"
-      "\"Ingress\":false,"
-      "\"ConfigFrom\":{\"Network\":\"\"},"
-      "\"ConfigOnly\":false,"
-      "\"Containers\":{},"
-      "\"Options\":{},"
-      "\"Labels\":{}"
-      "},"
-      "{"
-      "\"Name\":\"none\","
-      "\"Id\":\"none\","
-      "\"Created\":\"1970-01-01T00:00:00Z\","
-      "\"Scope\":\"local\","
-      "\"Driver\":\"null\","
-      "\"EnableIPv6\":false,"
-      "\"IPAM\":{\"Driver\":\"default\",\"Options\":{},\"Config\":[]},"
-      "\"Internal\":false,"
-      "\"Attachable\":false,"
-      "\"Ingress\":false,"
-      "\"ConfigFrom\":{\"Network\":\"\"},"
-      "\"ConfigOnly\":false,"
-      "\"Containers\":{},"
-      "\"Options\":{},"
-      "\"Labels\":{}"
-      "}"
-      "]\n";
+  json_out = "["
+             "{"
+             "\"Name\":\"droidspaces-bridge\","
+             "\"Id\":\"droidspaces-bridge\","
+             "\"Created\":\"1970-01-01T00:00:00Z\","
+             "\"Scope\":\"local\","
+             "\"Driver\":\"bridge\","
+             "\"EnableIPv6\":false,"
+             "\"IPAM\":{\"Driver\":\"default\",\"Options\":{},\"Config\":[]},"
+             "\"Internal\":false,"
+             "\"Attachable\":false,"
+             "\"Ingress\":false,"
+             "\"ConfigFrom\":{\"Network\":\"\"},"
+             "\"ConfigOnly\":false,"
+             "\"Containers\":{},"
+             "\"Options\":{},"
+             "\"Labels\":{}"
+             "},"
+             "{"
+             "\"Name\":\"host\","
+             "\"Id\":\"host\","
+             "\"Created\":\"1970-01-01T00:00:00Z\","
+             "\"Scope\":\"local\","
+             "\"Driver\":\"host\","
+             "\"EnableIPv6\":false,"
+             "\"IPAM\":{\"Driver\":\"default\",\"Options\":{},\"Config\":[]},"
+             "\"Internal\":false,"
+             "\"Attachable\":false,"
+             "\"Ingress\":false,"
+             "\"ConfigFrom\":{\"Network\":\"\"},"
+             "\"ConfigOnly\":false,"
+             "\"Containers\":{},"
+             "\"Options\":{},"
+             "\"Labels\":{}"
+             "},"
+             "{"
+             "\"Name\":\"none\","
+             "\"Id\":\"none\","
+             "\"Created\":\"1970-01-01T00:00:00Z\","
+             "\"Scope\":\"local\","
+             "\"Driver\":\"null\","
+             "\"EnableIPv6\":false,"
+             "\"IPAM\":{\"Driver\":\"default\",\"Options\":{},\"Config\":[]},"
+             "\"Internal\":false,"
+             "\"Attachable\":false,"
+             "\"Ingress\":false,"
+             "\"ConfigFrom\":{\"Network\":\"\"},"
+             "\"ConfigOnly\":false,"
+             "\"Containers\":{},"
+             "\"Options\":{},"
+             "\"Labels\":{}"
+             "}"
+             "]\n";
 
   return true;
 }
 
-}  // namespace droidspaces::socketd
+} // namespace droidspaces::socketd

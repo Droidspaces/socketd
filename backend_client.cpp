@@ -17,8 +17,8 @@
 namespace droidspaces::socketd {
 namespace {
 
-bool write_exact(int fd, const void* buf, std::size_t len, std::string& error) {
-  const auto* p = static_cast<const std::uint8_t*>(buf);
+bool write_exact(int fd, const void *buf, std::size_t len, std::string &error) {
+  const auto *p = static_cast<const std::uint8_t *>(buf);
 
   while (len > 0) {
     const ssize_t written = ::write(fd, p, len);
@@ -44,8 +44,8 @@ bool write_exact(int fd, const void* buf, std::size_t len, std::string& error) {
   return true;
 }
 
-bool read_exact(int fd, void* buf, std::size_t len, std::string& error) {
-  auto* p = static_cast<std::uint8_t*>(buf);
+bool read_exact(int fd, void *buf, std::size_t len, std::string &error) {
+  auto *p = static_cast<std::uint8_t *>(buf);
 
   while (len > 0) {
     const ssize_t received = ::read(fd, p, len);
@@ -71,7 +71,7 @@ bool read_exact(int fd, void* buf, std::size_t len, std::string& error) {
   return true;
 }
 
-int connect_backend(std::string& error) {
+int connect_backend(std::string &error) {
   const int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
   if (fd < 0) {
     error = "socket(AF_UNIX) failed: ";
@@ -79,7 +79,7 @@ int connect_backend(std::string& error) {
     return -1;
   }
 
-  sockaddr_un addr {};
+  sockaddr_un addr{};
   addr.sun_family = AF_UNIX;
 
   const std::size_t name_len = std::strlen(DS_SOCKETD_BACKEND_SOCK_NAME);
@@ -96,10 +96,10 @@ int connect_backend(std::string& error) {
    */
   std::memcpy(addr.sun_path + 1, DS_SOCKETD_BACKEND_SOCK_NAME, name_len);
 
-  const socklen_t addr_len = static_cast<socklen_t>(
-      offsetof(sockaddr_un, sun_path) + 1 + name_len);
+  const socklen_t addr_len =
+      static_cast<socklen_t>(offsetof(sockaddr_un, sun_path) + 1 + name_len);
 
-  if (::connect(fd, reinterpret_cast<const sockaddr*>(&addr), addr_len) < 0) {
+  if (::connect(fd, reinterpret_cast<const sockaddr *>(&addr), addr_len) < 0) {
     error = "connect(@";
     error += DS_SOCKETD_BACKEND_SOCK_NAME;
     error += ") failed: ";
@@ -123,18 +123,15 @@ std::uint64_t ntoh64(std::uint64_t value) {
 #endif
 }
 
-std::uint64_t hton64(std::uint64_t value) {
-  return ntoh64(value);
-}
+std::uint64_t hton64(std::uint64_t value) { return ntoh64(value); }
 
-std::string decode_fixed_string(const char* data, std::size_t size) {
+std::string decode_fixed_string(const char *data, std::size_t size) {
   if (!data || size == 0) {
     return {};
   }
 
-  const void* nul = std::memchr(data, '\0', size);
-  const std::size_t len =
-      nul ? static_cast<const char*>(nul) - data : size;
+  const void *nul = std::memchr(data, '\0', size);
+  const std::size_t len = nul ? static_cast<const char *>(nul) - data : size;
 
   /*
    * CONCERN(socketd-wire):
@@ -145,9 +142,8 @@ std::string decode_fixed_string(const char* data, std::size_t size) {
   return std::string(data, len);
 }
 
-bool expect_ok_status(std::uint16_t status,
-                      const char* operation,
-                      std::string& error) {
+bool expect_ok_status(std::uint16_t status, const char *operation,
+                      std::string &error) {
   if (status == DS_SOCKETD_STATUS_OK) {
     return true;
   }
@@ -158,14 +154,12 @@ bool expect_ok_status(std::uint16_t status,
   return false;
 }
 
-}  // namespace
+} // namespace
 
-bool BackendClient::request(std::uint16_t opcode,
-                            const void* payload,
+bool BackendClient::request(std::uint16_t opcode, const void *payload,
                             std::uint32_t payload_len,
-                            std::uint16_t& status_out,
-                            std::string& payload_out,
-                            std::string& error) const {
+                            std::uint16_t &status_out, std::string &payload_out,
+                            std::string &error) const {
   if (payload_len > DS_SOCKETD_MAX_PAYLOAD) {
     error = "request payload exceeds DS_SOCKETD_MAX_PAYLOAD";
     return false;
@@ -180,7 +174,7 @@ bool BackendClient::request(std::uint16_t opcode,
     return false;
   }
 
-  ds_socketd_request_header req {};
+  ds_socketd_request_header req{};
   req.magic_be = htonl(DS_SOCKETD_PROTO_MAGIC);
   req.version_be = htons(DS_SOCKETD_PROTO_VERSION);
   req.opcode_be = htons(opcode);
@@ -198,7 +192,7 @@ bool BackendClient::request(std::uint16_t opcode,
     }
   }
 
-  ds_socketd_response_header resp {};
+  ds_socketd_response_header resp{};
   if (!read_exact(fd, &resp, sizeof(resp), error)) {
     ::close(fd);
     return false;
@@ -243,7 +237,7 @@ bool BackendClient::request(std::uint16_t opcode,
   return true;
 }
 
-bool BackendClient::ping(std::string& error) const {
+bool BackendClient::ping(std::string &error) const {
   std::uint16_t status = DS_SOCKETD_STATUS_INTERNAL_ERROR;
   std::string payload;
 
@@ -266,13 +260,13 @@ bool BackendClient::ping(std::string& error) const {
   return true;
 }
 
-bool BackendClient::capabilities(CapabilitiesResult& out,
-                                 std::string& error) const {
+bool BackendClient::capabilities(CapabilitiesResult &out,
+                                 std::string &error) const {
   std::uint16_t status = DS_SOCKETD_STATUS_INTERNAL_ERROR;
   std::string payload;
 
-  if (!request(DS_SOCKETD_OP_CAPABILITIES, nullptr, 0,
-               status, payload, error)) {
+  if (!request(DS_SOCKETD_OP_CAPABILITIES, nullptr, 0, status, payload,
+               error)) {
     return false;
   }
 
@@ -294,21 +288,17 @@ bool BackendClient::capabilities(CapabilitiesResult& out,
   return true;
 }
 
-bool BackendClient::list_containers(
-    bool include_all,
-    std::vector<ContainerRecordResult>& out,
-    std::string& error) const {
-  ds_socketd_list_containers_req req {};
+bool BackendClient::list_containers(bool include_all,
+                                    std::vector<ContainerRecordResult> &out,
+                                    std::string &error) const {
+  ds_socketd_list_containers_req req{};
   req.include_all = include_all ? 1u : 0u;
 
   std::uint16_t status = DS_SOCKETD_STATUS_INTERNAL_ERROR;
   std::string payload;
 
-  if (!request(DS_SOCKETD_OP_LIST_CONTAINERS,
-               &req,
-               static_cast<std::uint32_t>(sizeof(req)),
-               status,
-               payload,
+  if (!request(DS_SOCKETD_OP_LIST_CONTAINERS, &req,
+               static_cast<std::uint32_t>(sizeof(req)), status, payload,
                error)) {
     return false;
   }
@@ -329,22 +319,16 @@ bool BackendClient::list_containers(
   out.reserve(count);
 
   for (std::size_t i = 0; i < count; ++i) {
-    ds_socketd_container_record wire {};
-    std::memcpy(&wire,
-                payload.data() + i * sizeof(wire),
-                sizeof(wire));
+    ds_socketd_container_record wire{};
+    std::memcpy(&wire, payload.data() + i * sizeof(wire), sizeof(wire));
 
     ContainerRecordResult result;
-    result.name =
-        decode_fixed_string(wire.name, sizeof(wire.name));
-    result.uuid =
-        decode_fixed_string(wire.uuid, sizeof(wire.uuid));
+    result.name = decode_fixed_string(wire.name, sizeof(wire.name));
+    result.uuid = decode_fixed_string(wire.uuid, sizeof(wire.uuid));
     result.rootfs_path =
         decode_fixed_string(wire.rootfs_path, sizeof(wire.rootfs_path));
-    result.hostname =
-        decode_fixed_string(wire.hostname, sizeof(wire.hostname));
-    result.nat_ip =
-        decode_fixed_string(wire.nat_ip, sizeof(wire.nat_ip));
+    result.hostname = decode_fixed_string(wire.hostname, sizeof(wire.hostname));
+    result.nat_ip = decode_fixed_string(wire.nat_ip, sizeof(wire.nat_ip));
     result.custom_init =
         decode_fixed_string(wire.custom_init, sizeof(wire.custom_init));
 
@@ -364,14 +348,13 @@ bool BackendClient::list_containers(
     result.ports.reserve(port_count);
 
     for (std::size_t j = 0; j < port_count; ++j) {
-      const ds_socketd_port_record& port_wire = wire.ports[j];
+      const ds_socketd_port_record &port_wire = wire.ports[j];
 
       ContainerPortResult port;
       port.host_port = ntohs(port_wire.host_port_be);
       port.host_port_end = ntohs(port_wire.host_port_end_be);
       port.container_port = ntohs(port_wire.container_port_be);
-      port.container_port_end =
-          ntohs(port_wire.container_port_end_be);
+      port.container_port_end = ntohs(port_wire.container_port_end_be);
       port.proto = port_wire.proto;
 
       result.ports.push_back(std::move(port));
@@ -383,11 +366,10 @@ bool BackendClient::list_containers(
   return true;
 }
 
-
-bool BackendClient::inspect_container(const std::string& ref,
-                                      ContainerInspectResult& out,
-                                      bool& not_found,
-                                      std::string& error) const {
+bool BackendClient::inspect_container(const std::string &ref,
+                                      ContainerInspectResult &out,
+                                      bool &not_found,
+                                      std::string &error) const {
   not_found = false;
 
   if (ref.empty() || ref.size() >= DS_SOCKETD_RECORD_NAME_MAX) {
@@ -395,17 +377,14 @@ bool BackendClient::inspect_container(const std::string& ref,
     return false;
   }
 
-  ds_socketd_inspect_container_req req {};
+  ds_socketd_inspect_container_req req{};
   std::memcpy(req.target, ref.c_str(), ref.size());
 
   std::uint16_t status = DS_SOCKETD_STATUS_INTERNAL_ERROR;
   std::string payload;
 
-  if (!request(DS_SOCKETD_OP_INSPECT_CONTAINER,
-               &req,
-               static_cast<std::uint32_t>(sizeof(req)),
-               status,
-               payload,
+  if (!request(DS_SOCKETD_OP_INSPECT_CONTAINER, &req,
+               static_cast<std::uint32_t>(sizeof(req)), status, payload,
                error)) {
     return false;
   }
@@ -425,7 +404,7 @@ bool BackendClient::inspect_container(const std::string& ref,
     return false;
   }
 
-  ds_socketd_inspect_container_record_v1 wire {};
+  ds_socketd_inspect_container_record_v1 wire{};
   std::memcpy(&wire, payload.data(), sizeof(wire));
 
   const std::uint16_t record_version = ntohs(wire.record_version_be);
@@ -449,8 +428,8 @@ bool BackendClient::inspect_container(const std::string& ref,
   result.dns_servers =
       decode_fixed_string(wire.dns_servers, sizeof(wire.dns_servers));
 
-  result.pid = static_cast<std::int32_t>(
-      ntohl(static_cast<std::uint32_t>(wire.pid_be)));
+  result.pid =
+      static_cast<std::int32_t>(ntohl(static_cast<std::uint32_t>(wire.pid_be)));
   result.started_at = static_cast<std::int64_t>(
       ntoh64(static_cast<std::uint64_t>(wire.started_at_be)));
   result.memory_limit = static_cast<std::int64_t>(
@@ -499,8 +478,8 @@ bool BackendClient::inspect_container(const std::string& ref,
   result.binds.reserve(bind_count);
   for (std::size_t i = 0; i < bind_count; ++i) {
     InspectBindResult bind;
-    bind.source = decode_fixed_string(wire.binds[i].source,
-                                      sizeof(wire.binds[i].source));
+    bind.source =
+        decode_fixed_string(wire.binds[i].source, sizeof(wire.binds[i].source));
     bind.destination = decode_fixed_string(wire.binds[i].destination,
                                            sizeof(wire.binds[i].destination));
     bind.read_only = wire.binds[i].read_only != 0;
@@ -514,7 +493,7 @@ bool BackendClient::inspect_container(const std::string& ref,
   result.port_total_count = ntohs(wire.port_total_count_be);
   result.ports.reserve(port_count);
   for (std::size_t i = 0; i < port_count; ++i) {
-    const ds_socketd_port_record& port_wire = wire.ports[i];
+    const ds_socketd_port_record &port_wire = wire.ports[i];
 
     ContainerPortResult port;
     port.host_port = ntohs(port_wire.host_port_be);
@@ -529,13 +508,11 @@ bool BackendClient::inspect_container(const std::string& ref,
   return true;
 }
 
-
-bool BackendClient::info(InfoResult& out, std::string& error) const {
+bool BackendClient::info(InfoResult &out, std::string &error) const {
   std::uint16_t status = DS_SOCKETD_STATUS_INTERNAL_ERROR;
   std::string payload;
 
-  if (!request(DS_SOCKETD_OP_INFO, nullptr, 0,
-               status, payload, error)) {
+  if (!request(DS_SOCKETD_OP_INFO, nullptr, 0, status, payload, error)) {
     return false;
   }
 
@@ -548,7 +525,7 @@ bool BackendClient::info(InfoResult& out, std::string& error) const {
     return false;
   }
 
-  ds_socketd_info_payload wire {};
+  ds_socketd_info_payload wire{};
   std::memcpy(&wire, payload.data(), sizeof(wire));
 
   out.containers_total = ntohl(wire.containers_total_be);
@@ -558,14 +535,12 @@ bool BackendClient::info(InfoResult& out, std::string& error) const {
   return true;
 }
 
-bool BackendClient::list_images(
-    std::vector<ImageRecordResult>& out,
-    std::string& error) const {
+bool BackendClient::list_images(std::vector<ImageRecordResult> &out,
+                                std::string &error) const {
   std::uint16_t status = DS_SOCKETD_STATUS_INTERNAL_ERROR;
   std::string payload;
 
-  if (!request(DS_SOCKETD_OP_LIST_IMAGES, nullptr, 0,
-               status, payload, error)) {
+  if (!request(DS_SOCKETD_OP_LIST_IMAGES, nullptr, 0, status, payload, error)) {
     return false;
   }
 
@@ -580,23 +555,18 @@ bool BackendClient::list_images(
 
   out.clear();
 
-  const std::size_t count =
-      payload.size() / sizeof(ds_socketd_image_record);
+  const std::size_t count = payload.size() / sizeof(ds_socketd_image_record);
   out.reserve(count);
 
   for (std::size_t i = 0; i < count; ++i) {
-    ds_socketd_image_record wire {};
-    std::memcpy(&wire,
-                payload.data() + i * sizeof(wire),
-                sizeof(wire));
+    ds_socketd_image_record wire{};
+    std::memcpy(&wire, payload.data() + i * sizeof(wire), sizeof(wire));
 
     ImageRecordResult result;
-    result.name =
-        decode_fixed_string(wire.name, sizeof(wire.name));
+    result.name = decode_fixed_string(wire.name, sizeof(wire.name));
     result.rootfs_path =
         decode_fixed_string(wire.rootfs_path, sizeof(wire.rootfs_path));
-    result.uuid =
-        decode_fixed_string(wire.uuid, sizeof(wire.uuid));
+    result.uuid = decode_fixed_string(wire.uuid, sizeof(wire.uuid));
 
     result.is_running =
         ntohl(static_cast<std::uint32_t>(wire.is_running_be)) != 0;
@@ -610,14 +580,11 @@ bool BackendClient::list_images(
   return true;
 }
 
-
-
 bool BackendClient::lifecycle_request(std::uint16_t opcode,
-                                      const std::string& ref,
-                                      int timeout_seconds,
-                                      LifecycleResult& out,
-                                      std::string& error) const {
-  out = LifecycleResult {};
+                                      const std::string &ref,
+                                      int timeout_seconds, LifecycleResult &out,
+                                      std::string &error) const {
+  out = LifecycleResult{};
 
   if (ref.empty() || ref.size() >= DS_SOCKETD_RECORD_NAME_MAX) {
     error = "container reference is empty or too long";
@@ -629,7 +596,7 @@ bool BackendClient::lifecycle_request(std::uint16_t opcode,
     return false;
   }
 
-  ds_socketd_lifecycle_req req {};
+  ds_socketd_lifecycle_req req{};
   std::memcpy(req.target, ref.c_str(), ref.size());
   req.timeout_seconds_be = static_cast<std::int32_t>(
       htonl(static_cast<std::uint32_t>(timeout_seconds)));
@@ -637,12 +604,8 @@ bool BackendClient::lifecycle_request(std::uint16_t opcode,
   std::uint16_t status = DS_SOCKETD_STATUS_INTERNAL_ERROR;
   std::string payload;
 
-  if (!request(opcode,
-               &req,
-               static_cast<std::uint32_t>(sizeof(req)),
-               status,
-               payload,
-               error)) {
+  if (!request(opcode, &req, static_cast<std::uint32_t>(sizeof(req)), status,
+               payload, error)) {
     return false;
   }
 
@@ -651,72 +614,60 @@ bool BackendClient::lifecycle_request(std::uint16_t opcode,
   }
 
   switch (status) {
-    case DS_SOCKETD_STATUS_NOT_FOUND:
-      out.not_found = true;
-      error = "container not found";
-      return false;
-    case DS_SOCKETD_STATUS_ALREADY_RUNNING:
-      out.already_running = true;
-      error = "container already running";
-      return false;
-    case DS_SOCKETD_STATUS_ALREADY_STOPPED:
-      out.already_stopped = true;
-      error = "container already stopped";
-      return false;
-    default:
-      return expect_ok_status(status, "LIFECYCLE", error);
+  case DS_SOCKETD_STATUS_NOT_FOUND:
+    out.not_found = true;
+    error = "container not found";
+    return false;
+  case DS_SOCKETD_STATUS_ALREADY_RUNNING:
+    out.already_running = true;
+    error = "container already running";
+    return false;
+  case DS_SOCKETD_STATUS_ALREADY_STOPPED:
+    out.already_stopped = true;
+    error = "container already stopped";
+    return false;
+  default:
+    return expect_ok_status(status, "LIFECYCLE", error);
   }
 }
 
-bool BackendClient::start_container(const std::string& ref,
-                                    LifecycleResult& out,
-                                    std::string& error) const {
+bool BackendClient::start_container(const std::string &ref,
+                                    LifecycleResult &out,
+                                    std::string &error) const {
   return lifecycle_request(DS_SOCKETD_OP_START_CONTAINER, ref, -1, out, error);
 }
 
-bool BackendClient::stop_container(const std::string& ref,
-                                   int timeout_seconds,
-                                   LifecycleResult& out,
-                                   std::string& error) const {
-  return lifecycle_request(DS_SOCKETD_OP_STOP_CONTAINER,
-                           ref,
-                           timeout_seconds,
-                           out,
-                           error);
+bool BackendClient::stop_container(const std::string &ref, int timeout_seconds,
+                                   LifecycleResult &out,
+                                   std::string &error) const {
+  return lifecycle_request(DS_SOCKETD_OP_STOP_CONTAINER, ref, timeout_seconds,
+                           out, error);
 }
 
-bool BackendClient::restart_container(const std::string& ref,
-                                      int timeout_seconds,
-                                      LifecycleResult& out,
-                                      std::string& error) const {
-  return lifecycle_request(DS_SOCKETD_OP_RESTART_CONTAINER,
-                           ref,
-                           timeout_seconds,
-                           out,
-                           error);
+bool BackendClient::restart_container(const std::string &ref,
+                                      int timeout_seconds, LifecycleResult &out,
+                                      std::string &error) const {
+  return lifecycle_request(DS_SOCKETD_OP_RESTART_CONTAINER, ref,
+                           timeout_seconds, out, error);
 }
 
-bool BackendClient::poll_events(
-    std::int64_t since,
-    std::vector<CoreEventResult>& out,
-    std::string& error) const {
+bool BackendClient::poll_events(std::int64_t since,
+                                std::vector<CoreEventResult> &out,
+                                std::string &error) const {
   if (since < 0) {
     error = "POLL_EVENTS does not accept a negative 'since' value";
     return false;
   }
 
-  ds_socketd_poll_events_req req {};
-  req.since_be = static_cast<std::int64_t>(
-      hton64(static_cast<std::uint64_t>(since)));
+  ds_socketd_poll_events_req req{};
+  req.since_be =
+      static_cast<std::int64_t>(hton64(static_cast<std::uint64_t>(since)));
 
   std::uint16_t status = DS_SOCKETD_STATUS_INTERNAL_ERROR;
   std::string payload;
 
-  if (!request(DS_SOCKETD_OP_POLL_EVENTS,
-               &req,
-               static_cast<std::uint32_t>(sizeof(req)),
-               status,
-               payload,
+  if (!request(DS_SOCKETD_OP_POLL_EVENTS, &req,
+               static_cast<std::uint32_t>(sizeof(req)), status, payload,
                error)) {
     return false;
   }
@@ -737,10 +688,8 @@ bool BackendClient::poll_events(
   out.reserve(count);
 
   for (std::size_t i = 0; i < count; ++i) {
-    ds_socketd_core_event_record wire {};
-    std::memcpy(&wire,
-                payload.data() + i * sizeof(wire),
-                sizeof(wire));
+    ds_socketd_core_event_record wire{};
+    std::memcpy(&wire, payload.data() + i * sizeof(wire), sizeof(wire));
 
     CoreEventResult result;
     result.time = static_cast<std::int64_t>(
@@ -748,12 +697,9 @@ bool BackendClient::poll_events(
     result.time_nano = static_cast<std::int64_t>(
         ntoh64(static_cast<std::uint64_t>(wire.time_nano_be)));
 
-    result.type =
-        decode_fixed_string(wire.type, sizeof(wire.type));
-    result.action =
-        decode_fixed_string(wire.action, sizeof(wire.action));
-    result.actor_id =
-        decode_fixed_string(wire.actor_id, sizeof(wire.actor_id));
+    result.type = decode_fixed_string(wire.type, sizeof(wire.type));
+    result.action = decode_fixed_string(wire.action, sizeof(wire.action));
+    result.actor_id = decode_fixed_string(wire.actor_id, sizeof(wire.actor_id));
     result.actor_name =
         decode_fixed_string(wire.actor_name, sizeof(wire.actor_name));
 
@@ -763,4 +709,4 @@ bool BackendClient::poll_events(
   return true;
 }
 
-}  // namespace droidspaces::socketd
+} // namespace droidspaces::socketd

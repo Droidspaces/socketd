@@ -3,12 +3,12 @@
 #include "backend_client.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <deque>
-#include <cerrno>
 #include <limits>
 #include <string>
 #include <utility>
@@ -51,7 +51,7 @@ std::int64_t unix_time_nanos_now() {
       .count();
 }
 
-std::string json_escape(const std::string& input) {
+std::string json_escape(const std::string &input) {
   std::string out;
   out.reserve(input.size());
 
@@ -59,52 +59,51 @@ std::string json_escape(const std::string& input) {
 
   for (unsigned char ch : input) {
     switch (ch) {
-      case '"':
-        out += "\\\"";
-        break;
-      case '\\':
-        out += "\\\\";
-        break;
-      case '\b':
-        out += "\\b";
-        break;
-      case '\f':
-        out += "\\f";
-        break;
-      case '\n':
-        out += "\\n";
-        break;
-      case '\r':
-        out += "\\r";
-        break;
-      case '\t':
-        out += "\\t";
-        break;
-      default:
-        if (ch < 0x20) {
-          out += "\\u00";
-          out += kHex[(ch >> 4) & 0x0f];
-          out += kHex[ch & 0x0f];
-        } else {
-          out += static_cast<char>(ch);
-        }
-        break;
+    case '"':
+      out += "\\\"";
+      break;
+    case '\\':
+      out += "\\\\";
+      break;
+    case '\b':
+      out += "\\b";
+      break;
+    case '\f':
+      out += "\\f";
+      break;
+    case '\n':
+      out += "\\n";
+      break;
+    case '\r':
+      out += "\\r";
+      break;
+    case '\t':
+      out += "\\t";
+      break;
+    default:
+      if (ch < 0x20) {
+        out += "\\u00";
+        out += kHex[(ch >> 4) & 0x0f];
+        out += kHex[ch & 0x0f];
+      } else {
+        out += static_cast<char>(ch);
+      }
+      break;
     }
   }
 
   return out;
 }
 
-bool parse_optional_epoch_seconds(const std::string& value,
-                                  std::int64_t& out,
-                                  std::string& error) {
+bool parse_optional_epoch_seconds(const std::string &value, std::int64_t &out,
+                                  std::string &error) {
   out = 0;
 
   if (value.empty()) {
     return true;
   }
 
-  char* end = nullptr;
+  char *end = nullptr;
   errno = 0;
   const long long parsed = std::strtoll(value.c_str(), &end, 10);
 
@@ -124,8 +123,7 @@ bool parse_optional_epoch_seconds(const std::string& value,
   return true;
 }
 
-bool event_in_window(const SocketdEvent& event,
-                     std::int64_t since,
+bool event_in_window(const SocketdEvent &event, std::int64_t since,
                      std::int64_t until) {
   if (since > 0 && event.time < since) {
     return false;
@@ -138,7 +136,7 @@ bool event_in_window(const SocketdEvent& event,
   return true;
 }
 
-std::string encode_event_json_line(const SocketdEvent& event) {
+std::string encode_event_json_line(const SocketdEvent &event) {
   std::string out;
   out.reserve(512);
 
@@ -186,7 +184,7 @@ std::string encode_event_json_line(const SocketdEvent& event) {
   return out;
 }
 
-SocketdEvent socketd_event_from_core_event(const CoreEventResult& core) {
+SocketdEvent socketd_event_from_core_event(const CoreEventResult &core) {
   SocketdEvent event;
   event.type = core.type;
   event.action = core.action;
@@ -204,12 +202,11 @@ SocketdEvent socketd_event_from_core_event(const CoreEventResult& core) {
   return event;
 }
 
-}  // namespace
+} // namespace
 
-void record_socketd_event(const std::string& type,
-                          const std::string& action,
-                          const std::string& actor_id,
-                          const SocketdEventAttributes* attributes,
+void record_socketd_event(const std::string &type, const std::string &action,
+                          const std::string &actor_id,
+                          const SocketdEventAttributes *attributes,
                           std::size_t attribute_count) {
   SocketdEvent event;
   event.type = type;
@@ -233,10 +230,9 @@ void record_socketd_event(const std::string& type,
   g_socketd_events.push_back(std::move(event));
 }
 
-bool request_event_log_stream_from_core(
-    const EventsRequest& request,
-    std::string& stream_out,
-    std::string& error) {
+bool request_event_log_stream_from_core(const EventsRequest &request,
+                                        std::string &stream_out,
+                                        std::string &error) {
   error.clear();
   stream_out.clear();
 
@@ -259,7 +255,7 @@ bool request_event_log_stream_from_core(
   std::vector<SocketdEvent> merged_events;
   merged_events.reserve(g_socketd_events.size());
 
-  for (const SocketdEvent& event : g_socketd_events) {
+  for (const SocketdEvent &event : g_socketd_events) {
     if (!event_in_window(event, since, until)) {
       continue;
     }
@@ -274,7 +270,7 @@ bool request_event_log_stream_from_core(
   if (backend.poll_events(since, core_events, backend_error)) {
     merged_events.reserve(merged_events.size() + core_events.size());
 
-    for (const CoreEventResult& core_event : core_events) {
+    for (const CoreEventResult &core_event : core_events) {
       SocketdEvent event = socketd_event_from_core_event(core_event);
 
       if (!event_in_window(event, since, until)) {
@@ -294,22 +290,20 @@ bool request_event_log_stream_from_core(
      */
   }
 
-  std::stable_sort(
-      merged_events.begin(),
-      merged_events.end(),
-      [](const SocketdEvent& lhs, const SocketdEvent& rhs) {
-        if (lhs.time_nano != rhs.time_nano) {
-          return lhs.time_nano < rhs.time_nano;
-        }
+  std::stable_sort(merged_events.begin(), merged_events.end(),
+                   [](const SocketdEvent &lhs, const SocketdEvent &rhs) {
+                     if (lhs.time_nano != rhs.time_nano) {
+                       return lhs.time_nano < rhs.time_nano;
+                     }
 
-        return lhs.time < rhs.time;
-      });
+                     return lhs.time < rhs.time;
+                   });
 
-  for (const SocketdEvent& event : merged_events) {
+  for (const SocketdEvent &event : merged_events) {
     stream_out += encode_event_json_line(event);
   }
 
   return true;
 }
 
-}  // namespace droidspaces::socketd
+} // namespace droidspaces::socketd

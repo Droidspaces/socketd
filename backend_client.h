@@ -118,10 +118,8 @@ public:
                        std::vector<ContainerRecordResult> &out,
                        std::string &error) const;
 
-  bool inspect_container(const std::string &ref,
-                         ContainerInspectResult &out,
-                         bool &not_found,
-                         std::string &error) const;
+  bool inspect_container(const std::string &ref, ContainerInspectResult &out,
+                         bool &not_found, std::string &error) const;
 
   bool info(InfoResult &out, std::string &error) const;
 
