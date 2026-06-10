@@ -10,6 +10,8 @@
 #include <iostream>
 #include <string>
 
+#include <sys/stat.h>
+
 namespace {
 
 using droidspaces::socketd::ApiServer;
@@ -17,6 +19,7 @@ using droidspaces::socketd::BackendClient;
 using droidspaces::socketd::CapabilitiesResult;
 using droidspaces::socketd::parse_tcp_listen_endpoint;
 using droidspaces::socketd::record_socketd_event;
+using droidspaces::socketd::set_web_root;
 using droidspaces::socketd::SocketdEventAttributes;
 using droidspaces::socketd::TcpListenConfig;
 
@@ -28,12 +31,15 @@ void print_usage(const char *argv0) {
   std::cerr << "Usage:\n"
             << "  " << argv0 << " --listen-tcp [PORT]\n"
             << "  " << argv0 << " --listen-tcp [ADDR:PORT]\n"
+            << "  " << argv0 << " --web-root DIR\n"
             << "\n"
             << "Examples:\n"
             << "  " << argv0 << " --listen-tcp\n"
             << "  " << argv0 << " --listen-tcp 2375\n"
             << "  " << argv0 << " --listen-tcp 127.0.0.1:2375\n"
-            << "  " << argv0 << " --listen-tcp 0.0.0.0:2375\n";
+            << "  " << argv0 << " --listen-tcp 0.0.0.0:2375\n"
+            << "  " << argv0
+            << " --listen-tcp 2375 --web-root /path/to/webui\n";
 }
 
 bool check_backend(std::string &error) {
@@ -139,6 +145,26 @@ int main(int argc, char **argv) {
         return 2;
       }
 
+      continue;
+    }
+
+    if (arg == "--web-root" || arg.rfind("--web-root=", 0) == 0) {
+      std::string value;
+
+      if (arg[10] == '=') {
+        value = arg.substr(std::string("--web-root=").size());
+      } else if (i + 1 < argc) {
+        value = argv[++i];
+      }
+
+      struct stat st{};
+      if (value.empty() || ::stat(value.c_str(), &st) != 0 ||
+          !S_ISDIR(st.st_mode)) {
+        std::cerr << "socketd: --web-root requires an existing directory\n";
+        return 2;
+      }
+
+      set_web_root(value);
       continue;
     }
 

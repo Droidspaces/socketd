@@ -426,9 +426,11 @@ std::string socketd_binary_dir() {
   return dirname_of(buffer);
 }
 
+std::string g_web_root_override;
+
 const std::string &web_root_dir() {
   static const std::string root = socketd_binary_dir() + "/../www/html";
-  return root;
+  return g_web_root_override.empty() ? root : g_web_root_override;
 }
 
 std::string lowercase_ascii(std::string value) {
@@ -1320,6 +1322,8 @@ bool send_events_ok(int fd, const std::string &target, bool suppress_body,
 }
 
 } // namespace
+
+void set_web_root(const std::string &path) { g_web_root_override = path; }
 
 bool parse_tcp_listen_endpoint(const std::string &value, TcpListenConfig &out,
                                std::string &error) {

@@ -3,7 +3,6 @@
 
 ROOT_DIR := ../..
 SRC_DIR  := .
-API_DIR  := ..
 OUT_DIR  := $(ROOT_DIR)/output
 OBJ_DIR  := $(OUT_DIR)/.obj/socketd
 
@@ -30,7 +29,7 @@ endif
 
 CXXFLAGS ?= -Wall -Wextra -Wpedantic -Werror \
             -O2 -std=c++17 \
-            -I$(SRC_DIR) -I$(API_DIR)/include
+            -I$(SRC_DIR) -I$(ROOT_DIR)/src/include
 
 LDFLAGS ?=
 LDLIBS   ?=

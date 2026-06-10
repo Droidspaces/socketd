@@ -23,6 +23,12 @@ struct TcpListenConfig {
 bool parse_tcp_listen_endpoint(const std::string &value, TcpListenConfig &out,
                                std::string &error);
 
+/*
+ * Overrides the WebUI document root. When unset, static assets are served
+ * from <binary_dir>/../www/html.
+ */
+void set_web_root(const std::string &path);
+
 class ApiServer {
 public:
   explicit ApiServer(TcpListenConfig config);
