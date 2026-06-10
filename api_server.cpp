@@ -772,8 +772,17 @@ bool parse_container_ref_with_suffix(const std::string &target,
     return false;
   }
 
-  ref_out = unversioned_path.substr(prefix_len, unversioned_path.size() -
-                                                    prefix_len - suffix_len);
+  const std::string raw_ref = unversioned_path.substr(
+      prefix_len, unversioned_path.size() - prefix_len - suffix_len);
+
+  /*
+   * Container names may contain spaces, which Docker-compatible clients
+   * percent-encode in the request path. Decoding after splitting on '/'
+   * keeps an encoded %2F from smuggling a path separator into the ref.
+   */
+  if (!percent_decode_url_path(raw_ref, ref_out)) {
+    return false;
+  }
 
   return !ref_out.empty() && ref_out.find('/') == std::string::npos;
 }
